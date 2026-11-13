@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AR على تارجت</title>
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.3.0/dist/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  #hint {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10; padding: 14px;
+    text-align: center; color: #fff; font: 16px/1.6 system-ui, sans-serif;
+    background: rgba(0,0,0,.45); pointer-events: none;
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+</style>
+</head>
+<body>
+
+<div id="hint">سلّط الكاميرا على صورة التارجت (marker.png) وهيظهر المكعب فوقها</div>
+
+<!--
+  ملحوظات:
+  - patternUrl = ملف التعرف على التارجت (marker.patt) لازم يكون جنب الـ index.html
+  - لو عايز موديل GLB بدل المكعب: حط رابطه في السطر الخاص بـ a-entity gltf-model وامسح الـ a-box
+-->
+<a-scene
+  embedded
+  vr-mode-ui="enabled: false"
+  renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true"
+  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; maxDetectionRate: 30; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960;">
+
+  <a-marker type="pattern" url="marker.patt" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="5">
+
+    <!-- المكعب: واقف فوق التارجت. 1 وحدة = عرض التارجت -->
+    <a-box position="0 0.5 0" scale="0.8 0.8 0.8" color="#ff5722" material="roughness: 0.4"
+           animation="property: rotation; to: 0 360 0; dur: 6000; easing: linear; loop: true"></a-box>
+
+    <!-- مثال موديل GLB (فعّله وامسح المكعب فوق):
+    <a-entity gltf-model="url(model.glb)" position="0 0 0" scale="1 1 1"></a-entity>
+    -->
+
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+
+<script>
+  // نخفي الرسالة لما التارجت يتلقط
+  const marker = document.querySelector('a-marker');
+  const hint = document.getElementById('hint');
+  marker.addEventListener('markerFound', () => hint.style.display = 'none');
+  marker.addEventListener('markerLost', () => hint.style.display = 'block');
+</script>
+</body>
+</html>
