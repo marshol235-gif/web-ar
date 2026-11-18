@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>طيارة AR في أوضتك</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--ink:#fff;--sky:#54c0ff;--sun:#ffb02e;box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:Cairo,system-ui,sans-serif;color:var(--ink);background:linear-gradient(#0d2a4a,#2f7fc4 60%,#bfe6ff)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#ui{position:fixed;inset:0;pointer-events:none}
+#ui>*{pointer-events:auto}
+.card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,420px);text-align:center;background:rgba(8,24,44,.82);padding:22px 20px;border-radius:22px;display:grid;gap:12px}
+.card h1{margin:0;font-size:clamp(30px,8vw,44px);font-weight:900;line-height:1.15}
+.card p{margin:0;font-weight:600;font-size:15px;opacity:.92;line-height:1.7}
+button{font:inherit;font-weight:900;font-size:19px;padding:12px 22px;border:0;border-radius:30px;background:var(--sun);color:#10253f;cursor:pointer}
+button.alt{background:rgba(255,255,255,.2);color:#fff}
+button:disabled{opacity:.4}
+button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#msg{color:#ffd0d0;font-size:14px;min-height:1em}
+#top{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;align-items:center;pointer-events:none!important}
+#top>*{pointer-events:auto;background:rgba(8,24,44,.65);border-radius:14px;padding:6px 14px;font-weight:900}
+#tip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 62px);left:50%;transform:translateX(-50%);width:max-content;max-width:88vw;text-align:center;background:rgba(255,176,46,.94);color:#10253f;font-weight:900;padding:8px 16px;border-radius:14px;font-size:15px;pointer-events:none!important}
+#hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 110px);transform:translateX(-50%);width:min(90vw,400px);text-align:center;background:rgba(8,24,44,.75);padding:12px;border-radius:16px;font-weight:600;font-size:15px;line-height:1.6}
+#place{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 40px);transform:translateX(-50%)}
+#pads{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;justify-content:space-between;align-items:flex-end;padding:0 16px;direction:ltr;pointer-events:none!important}
+#pads>*{pointer-events:auto}
+.grp{display:flex;gap:10px}
+.pb{width:clamp(66px,19vw,92px);height:clamp(66px,19vw,92px);border-radius:50%;background:rgba(8,24,44,.6);border:3px solid rgba(255,255,255,.55);display:grid;place-items:center;font-size:30px;font-weight:900}
+.pb.on{background:var(--sun);color:#10253f}
+#spd{display:grid;gap:4px;justify-items:center;background:rgba(8,24,44,.6);padding:8px 14px;border-radius:14px;font-size:13px;font-weight:600;direction:rtl}
+#spd input{width:min(26vw,120px)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="lang" class="card"><h1>Roomwings ✈️</h1><p>اختار لغتك · Choose your language</p><button id="lAr">العربية</button><button id="lEn">English</button></div>
+  <div id="start" class="card hide">
+    <h1 id="t_h1">طيارتك في أوضتك ✈️</h1>
+    <p id="t_p">الطيارة بتقف على مهبط فوق أي سطح قدامك. شد الغاز، اقلع، عدّي من الحلقات الدهبية، وخلي عينك على البنزين ⛽ (جمّع الجراكن الحمرا أو اهبط على المهبط تتفول).</p>
+    <button id="goAR">ابدأ الواقع المعزز AR</button>
+    <button id="goTry" class="alt">جرّب بدون AR</button>
+    <div id="msg"></div>
+    <p id="t_note" style="font-size:12px;opacity:.7">محتاج Chrome على أندرويد + خدمات Google Play للواقع المعزز</p>
+  </div>
+  <div id="top" class="hide"><span><i id="t_rings" style="font-style:normal">الحلقات:</i> <b id="sc">0</b></span><span>⛽ <b id="fu">100</b>%</span><button id="exit" class="alt" style="font-size:14px;padding:6px 14px">خروج</button></div>
+  <div id="tip" class="hide"></div>
+  <div id="hint" class="hide"></div>
+  <button id="place" class="hide">ثبّت الطيارة هنا</button>
+  <div id="pads" class="hide">
+    <div class="grp"><div class="pb" id="bu">▲</div><div class="pb" id="bd">▼</div></div>
+    <div id="spd"><span id="t_thr">الغاز</span><input id="sl" type="range" min="0" max="100" value="0"><button id="re" class="alt" style="font-size:13px;padding:5px 12px">غيّر المكان</button></div>
+    <div class="grp"><div class="pb" id="bl">◀</div><div class="pb" id="br">▶</div></div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.xr.enabled=true;
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.01,50);
+function resize(){if(renderer.xr.isPresenting)return;renderer.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.1));
+const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(1,2,1);scene.add(dl);
+
+// ---- world root (placed on a real surface in AR) ----
+const root=new THREE.Group();root.visible=false;scene.add(root);
+const grid=new THREE.GridHelper(3.2,16,0xffffff,0xffffff);grid.material.transparent=true;grid.material.opacity=.18;root.add(grid);
+const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.5},o||{}));
+const plane=new THREE.Group();
+const part=(g,m,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);plane.add(o);return o;};
+const body=part(new THREE.CylinderGeometry(.03,.02,.3,10),M(0xe8412f),0,0,0);body.rotation.x=Math.PI/2;
+const nose=part(new THREE.ConeGeometry(.03,.07,10),M(0xffffff),0,0,-.185);nose.rotation.x=-Math.PI/2;
+part(new THREE.BoxGeometry(.38,.008,.075),M(0xffffff),0,0,-.02);
+part(new THREE.BoxGeometry(.15,.008,.05),M(0xffffff),0,0,.13);
+part(new THREE.BoxGeometry(.008,.06,.05),M(0xe8412f),0,.035,.13);
+part(new THREE.SphereGeometry(.026,10,8),M(0x203040,{metalness:.6}),0,.03,-.04);
+const prop=part(new THREE.BoxGeometry(.12,.012,.006),M(0x222222),0,0,-.22);
+root.add(plane);
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(.09,16),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.35}));
+shadow.rotation.x=-Math.PI/2;shadow.position.y=.003;root.add(shadow);
+const rings=[],ringG=new THREE.TorusGeometry(.13,.016,8,24),ringM=M(0xffc21a,{emissive:0x7a5500});
+function moveRing(r){const a=Math.random()*6.28,d=.3+Math.random()*.8;r.position.set(Math.cos(a)*d,.2+Math.random()*.7,Math.sin(a)*d);r.rotation.y=Math.random()*3.14;}
+for(let i=0;i<4;i++){const r=new THREE.Mesh(ringG,ringM);moveRing(r);root.add(r);rings.push(r);}
+// runway, gear, prop disc, fuel cans
+const rw=new THREE.Mesh(new THREE.BoxGeometry(.32,.002,1.5),M(0x2a2a30));rw.position.y=.001;root.add(rw);
+for(let i=-6;i<=6;i++){const d=new THREE.Mesh(new THREE.BoxGeometry(.012,.0005,.07),M(0xffffff));d.position.set(0,.00225,i*.11);root.add(d);}
+const pad=new THREE.Mesh(new THREE.BoxGeometry(.32,.0005,.1),M(0xffb02e));pad.position.set(0,.00225,.64);root.add(pad);
+const gear=new THREE.Group();[[-.07,-.035,-.03],[.07,-.035,-.03],[0,-.03,.13]].forEach(p=>{const w=new THREE.Mesh(new THREE.SphereGeometry(.016,8,6),M(0x111111));w.position.set(p[0],p[1],p[2]);gear.add(w);});plane.add(gear);
+const disc=new THREE.Mesh(new THREE.CircleGeometry(.065,18),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));disc.position.z=-.225;plane.add(disc);
+const cans=[],canG=new THREE.BoxGeometry(.07,.09,.045),canM=M(0xe02a2a,{emissive:0x600000});
+for(let i=0;i<2;i++){const c=new THREE.Mesh(canG,canM);moveRing(c);root.add(c);cans.push(c);}
+// reticle
+const ret=new THREE.Mesh(new THREE.RingGeometry(.12,.15,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x54ffb0}));
+ret.matrixAutoUpdate=false;ret.visible=false;scene.add(ret);
+
+// ---- flight ----
+// ---- language (Arabic is the default text in the HTML; English overrides it) ----
+let LANG='ar',noAR=false;
+const L={ar:{},en:{
+ h1:'Roomwings ✈️',
+ p:'Your plane waits on a runway on any surface in front of you. Push the throttle, take off, fly through the golden rings, and watch your fuel ⛽ (grab the red fuel cans or land on the runway to refuel).',
+ goAR:'Start AR',goTry:'Try without AR',note:'Needs Chrome on Android + Google Play Services for AR',
+ rings:'Rings:',exit:'Exit',place:'Place the plane here',thr:'Throttle',re:'Move spot',
+ hint:'Move your phone slowly toward a flat surface (floor or table) until the green circle appears, then tap "Place".',
+ tip0:'Push the throttle up, and once you pick up speed tap ▲ to take off',
+ crash:'Crashed! 💥',empty:'Out of fuel! Try to glide back to the runway',takeoff:'Airborne! ✈️',land:'Nice landing 👌',fuelup:'+25% fuel ⛽',
+ noar:'AR is not available on this device or browser. Open the link in Chrome on an Android phone, or try without AR.',
+ arfail:e=>'Could not start AR: '+e+' — try opening the link directly in Chrome.'}};
+const t=(k,a)=>{const s=L[LANG][k];return typeof s==='function'?s(a):s;};
+function setLang(l){LANG=l;const D=document.documentElement;D.lang=l;D.dir=l==='ar'?'rtl':'ltr';
+ if(l==='en'){const E=L.en;document.title='Roomwings: AR Plane Pilot';
+  $('t_h1').textContent=E.h1;$('t_p').textContent=E.p;$('goAR').textContent=E.goAR;$('goTry').textContent=E.goTry;$('t_note').textContent=E.note;
+  $('t_rings').textContent=E.rings;$('exit').textContent=E.exit;$('place').textContent=E.place;$('t_thr').textContent=E.thr;$('re').textContent=E.re;
+  if(noAR)$('msg').textContent=E.noar;}
+ $('lang').classList.add('hide');$('start').classList.remove('hide');}
+$('lAr').onclick=()=>setLang('ar');$('lEn').onclick=()=>setLang('en');
+// ---- sound ----
+let ac,o1,o2,ef,eg,wg,nb;
+function audio(){if(ac)return;try{ac=new (window.AudioContext||window.webkitAudioContext)();
+ o1=ac.createOscillator();o2=ac.createOscillator();o1.type='sawtooth';o2.type='square';
+ ef=ac.createBiquadFilter();ef.type='lowpass';ef.frequency.value=600;eg=ac.createGain();eg.gain.value=0;
+ o1.connect(ef);o2.connect(ef);ef.connect(eg);eg.connect(ac.destination);o1.start();o2.start();
+ nb=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ const ns=ac.createBufferSource();ns.buffer=nb;ns.loop=true;const bf=ac.createBiquadFilter();bf.type='bandpass';bf.frequency.value=900;
+ wg=ac.createGain();wg.gain.value=0;ns.connect(bf);bf.connect(wg);wg.connect(ac.destination);ns.start();}catch(e){}}
+function beep(f,d,type,v){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;
+ g.gain.setValueAtTime(v||.12,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}
+function boom(){if(!ac)return;const s=ac.createBufferSource();s.buffer=nb;const g=ac.createGain();g.gain.setValueAtTime(.4,ac.currentTime);
+ g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.9);s.connect(g);g.connect(ac.destination);s.start();}
+function snd(v,thr,on){if(!ac)return;const t=ac.currentTime;
+ if(on){const f=42+thr*150+v*20;o1.frequency.setTargetAtTime(f,t,.1);o2.frequency.setTargetAtTime(f*.5,t,.1);}
+ ef.frequency.setTargetAtTime(500+thr*1500,t,.1);eg.gain.setTargetAtTime(on?.035+thr*.06:0,t,.1);
+ wg.gain.setTargetAtTime(v>.05?v*.09:0,t,.1);}
+const K={l:0,r:0,u:0,d:0};
+let x=0,y=.4,z=0,yaw=0,pitch=0,roll=0,score=0,placed=false,arActive=false,hts=null,session=null;
+const clock=new THREE.Clock(),fw=new THREE.Vector3(),eu=new THREE.Euler();
+const GY=.055;let v=0,air=false,fuel=100,dead=0,beepT=0,tipT=0;
+function tip(s,t){$('tip').textContent=s;$('tip').classList.toggle('hide',!s);tipT=t||0;}
+function reset(){x=0;y=GY;z=.55;yaw=0;pitch=0;roll=0;v=0;air=false;fuel=100;dead=0;$('sl').value=0;tip(t('tip0')||'شد الغاز لفوق، ولما السرعة تزيد دوس ▲ عشان تقلع');}
+function crash(){dead=1.8;v=0;tip(t('crash')||'اتحطمت! 💥');boom();}
+function fly(dt){
+ if(dead>0){dead-=dt;if(dead<=0)reset();snd(0,0,false);return;}
+ const thr=$('sl').value/100,turn=K.r-K.l,eng=fuel>0;
+ v+=((eng?thr*1.2:0)-v)*Math.min(1,dt*(air?.7:.5));
+ if(eng){fuel=Math.max(0,fuel-dt*(.6+thr*2.2));if(fuel===0)tip(t('empty')||'البنزين خلص! حاول تهبط على المهبط',4);}
+ yaw-=turn*1.6*dt*Math.min(1,v/.3);
+ if(!air){
+  pitch+=(0-pitch)*Math.min(1,dt*6);roll+=(0-roll)*Math.min(1,dt*6);y=GY;
+  if(K.u&&v>.4){air=true;pitch=.12;tip(t('takeoff')||'قلعت! ✈️',2);beep(520,.15,'triangle');}
+  if(Math.abs(x)<.2&&Math.abs(z)<.75&&v<.15&&fuel<100)fuel=Math.min(100,fuel+25*dt);
+ }else{
+  pitch+=((K.u-K.d)*.6-pitch)*Math.min(1,dt*4);
+  roll+=((-turn*.7)-roll)*Math.min(1,dt*5);
+  const r=Math.hypot(x,z);
+  if(r>1.4){const tx=-x/r,tz=-z/r,side=tx*(-Math.cos(yaw))+tz*Math.sin(yaw);yaw+=(Math.abs(side)<.1?1:side)*2.5*dt;}
+  eu.set(pitch,yaw,0,'YXZ');fw.set(0,0,-1).applyEuler(eu);
+  const vy=fw.y*v-(v<.35?(.35-v)*1.2:0);
+  y=Math.min(1.4,y+vy*dt);
+  if(y<=GY){if(vy<-.4)crash();else{air=false;y=GY;tip(t('land')||'هبوط ناجح 👌',2);beep(330,.12,'triangle');}}
+ }
+ eu.set(air?pitch:0,yaw,0,'YXZ');fw.set(0,0,-1).applyEuler(eu);
+ x+=fw.x*v*dt;z+=fw.z*v*dt;
+ plane.position.set(x,y,z);plane.rotation.set(air?pitch:0,yaw,air?roll:0,'YXZ');
+ gear.visible=!air;
+ prop.rotation.z+=(eng?8+thr*60:.5)*dt;disc.material.opacity=eng?.04+thr*.22:0;
+ shadow.position.x=x;shadow.position.z=z;shadow.scale.setScalar(1/(1+y*1.5));
+ rings.forEach(g=>{if(g.position.distanceTo(plane.position)<.17){score++;$('sc').textContent=score;moveRing(g);beep(880,.1);setTimeout(()=>beep(1320,.15),90);}});
+ cans.forEach(g=>{g.rotation.y+=dt*2;if(g.position.distanceTo(plane.position)<.15){fuel=Math.min(100,fuel+25);moveRing(g);tip(t('fuelup')||'+25% بنزين ⛽',1.5);beep(700,.1);setTimeout(()=>beep(950,.15),90);}});
+ $('fu').textContent=Math.round(fuel);
+ if(fuel>0&&fuel<20){beepT-=dt;if(beepT<=0){beepT=.9;beep(1000,.08,'square',.06);}}
+ if(tipT>0){tipT-=dt;if(tipT<=0)tip('');}
+ snd(v,thr,eng);
+}
+renderer.setAnimationLoop((t,frame)=>{
+ const dt=Math.min(clock.getDelta(),.05);
+ if(frame&&hts&&!placed){
+  const hr=frame.getHitTestResults(hts);
+  if(hr.length){const p=hr[0].getPose(renderer.xr.getReferenceSpace());ret.visible=true;ret.matrix.fromArray(p.transform.matrix);}else ret.visible=false;
+ }
+ if(placed)fly(dt);else snd(0,0,false);
+ if(!arActive){cam.position.set(0,.95,2);cam.lookAt(0,.35,0);}
+ renderer.render(scene,cam);
+});
+
+// ---- UI flow ----
+function showPlaying(){['top','pads'].forEach(i=>$(i).classList.remove('hide'));$('start').classList.add('hide');}
+function showPlacing(){$('hint').textContent=t('hint')||'حرّك الموبايل ببطء ناحية سطح مستوي (أرضية أو ترابيزة) لحد ما تظهر الدايرة الخضرا، وبعدين اضغط "ثبّت".';
+ ['hint','place'].forEach(i=>$(i).classList.remove('hide'));$('pads').classList.add('hide');$('top').classList.remove('hide');$('start').classList.add('hide');}
+$('place').onclick=()=>{if(!ret.visible)return;root.position.setFromMatrixPosition(ret.matrix);root.scale.setScalar(.6);root.visible=true;ret.visible=false;placed=true;reset();
+ $('hint').classList.add('hide');$('place').classList.add('hide');$('pads').classList.remove('hide');};
+$('re').onclick=()=>{tip('');placed=false;root.visible=false;showPlacing();};
+$('goTry').onclick=()=>{audio();root.scale.setScalar(1);arActive=false;root.position.set(0,0,0);root.visible=true;placed=true;reset();showPlaying();};
+$('exit').onclick=()=>{if(session)session.end();else back();};
+function back(){placed=false;root.visible=false;ret.visible=false;arActive=false;hts=null;session=null;
+ ['top','pads','hint','place','tip'].forEach(i=>$(i).classList.add('hide'));$('start').classList.remove('hide');resize();}
+$('goAR').onclick=async()=>{audio();
+ $('msg').textContent='';
+ try{
+  const s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test'],optionalFeatures:['dom-overlay'],domOverlay:{root:$('ui')}});
+  renderer.xr.setReferenceSpaceType('local');await renderer.xr.setSession(s);
+  session=s;arActive=true;
+  s.addEventListener('end',back);
+  const vs=await s.requestReferenceSpace('viewer');hts=await s.requestHitTestSource({space:vs});
+  showPlacing();
+ }catch(e){$('msg').textContent=t('arfail',e&&e.message?e.message:e)||'مقدرش يفتح AR: '+(e&&e.message?e.message:e)+' — جرّب تفتح الرابط مباشرة في Chrome.';}
+};
+(async()=>{let ok=false;try{ok=!!(navigator.xr&&await navigator.xr.isSessionSupported('immersive-ar'));}catch(e){}
+ if(!ok){noAR=true;$('goAR').disabled=true;$('msg').textContent=t('noar')||'الـ AR مش متاح على الجهاز أو المتصفح ده. افتح الرابط في Chrome على موبايل أندرويد، أو جرّب بدون AR.';}})();
+$('ui').addEventListener('beforexrselect',e=>e.preventDefault());
+
+// ---- input ----
+[['bl','l'],['br','r'],['bu','u'],['bd','d']].forEach(([id,k])=>{const el=$(id);
+ el.addEventListener('pointerdown',e=>{e.preventDefault();K[k]=1;el.classList.add('on');});
+ ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,()=>{K[k]=0;el.classList.remove('on');}));});
+const km={ArrowLeft:'l',ArrowRight:'r',ArrowUp:'u',ArrowDown:'d',a:'l',d:'r',w:'u',s:'d'};
+addEventListener('keydown',e=>{if(km[e.key])K[km[e.key]]=1;});
+addEventListener('keyup',e=>{if(km[e.key])K[km[e.key]]=0;});
+})();
+</script>
+</body>
+</html>
